@@ -1,74 +1,131 @@
--- Мобильный Kill-Aura для Jurassic Blocky
--- Репозиторий: JB-Attacked-Mobile
+-- Улучшенный мобильный Kill-Aura для Jurassic Blocky
 local Player = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
 
 -- Настройки
-local DEFAULT_RADIUS = 150 -- Стандартный радиус 
-local KILL_DELAY = 0.4 -- Задержка между атаками
-local VIBRATE_ON_KILL = true -- Вибрация при убийстве
+local DEFAULT_RADIUS = 100
+local MIN_RADIUS = 20
+local MAX_RADIUS = 300
+local KILL_DELAY = 0.3
+local VIBRATE_ON_KILL = true
 
 -- Интерфейс
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
--- Главная кнопка (стиль Delta)
-local MainBtn = Instance.new("TextButton")
-MainBtn.Name = "DeltaAuraBtn"
-MainBtn.Parent = ScreenGui
-MainBtn.Size = UDim2.new(0, 110, 0, 110)
-MainBtn.Position = UDim2.new(0.82, 0, 0.75, 0)
-MainBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-MainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainBtn.Text = "DELTA\nOFF"
-MainBtn.TextSize = 16
-MainBtn.Font = Enum.Font.SourceSansBold
-MainBtn.ZIndex = 999
+-- Главное окно
+local MainWindow = Instance.new("Frame")
+MainWindow.Name = "DeltaWindow"
+MainWindow.Parent = ScreenGui
+MainWindow.Size = UDim2.new(0, 200, 0, 180)
+MainWindow.Position = UDim2.new(0.75, 0, 0.5, -90)
+MainWindow.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MainWindow.Active = true
+MainWindow.Draggable = true
 
--- Индикатор радиуса
+-- Стиль окна
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0.1, 0)
+UICorner.Parent = MainWindow
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(80, 80, 120)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainWindow
+
+-- Заголовок
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = MainWindow
+Title.Text = "DELTA MOBILE v2"
+Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Font = Enum.Font.GothamBold
+Title.BackgroundTransparency = 1
+
+-- Кнопка вкл/выкл
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Parent = MainWindow
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+ToggleBtn.Text = "AURA: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 120, 120)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+
+-- Ползунок радиуса
+local SliderFrame = Instance.new("Frame")
+SliderFrame.Name = "SliderFrame"
+SliderFrame.Parent = MainWindow
+SliderFrame.Size = UDim2.new(0.9, 0, 0, 50)
+SliderFrame.Position = UDim2.new(0.05, 0, 0.45, 0)
+SliderFrame.BackgroundTransparency = 1
+
 local RadiusLabel = Instance.new("TextLabel")
 RadiusLabel.Name = "RadiusLabel"
-RadiusLabel.Parent = ScreenGui
-RadiusLabel.Size = UDim2.new(0, 80, 0, 30)
-RadiusLabel.Position = UDim2.new(0.7, 0, 0.75, 0)
-RadiusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-RadiusLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+RadiusLabel.Parent = SliderFrame
+RadiusLabel.Size = UDim2.new(1, 0, 0, 20)
 RadiusLabel.Text = "RADIUS: "..DEFAULT_RADIUS
-RadiusLabel.TextSize = 12
+RadiusLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+RadiusLabel.Font = Enum.Font.Gotham
+RadiusLabel.BackgroundTransparency = 1
 
--- Стиль Delta
-local function applyDeltaStyle()
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0.2, 0)
-    corner.Parent = MainBtn
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Color = Color3.fromRGB(255, 80, 80)
-    stroke.Thickness = 2
-    stroke.Parent = MainBtn
-    
-    RadiusLabel.Font = Enum.Font.Code
+local Slider = Instance.new("Frame")
+Slider.Name = "Slider"
+Slider.Parent = SliderFrame
+Slider.Size = UDim2.new(1, 0, 0, 10)
+Slider.Position = UDim2.new(0, 0, 0.5, 0)
+Slider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Name = "SliderFill"
+SliderFill.Parent = Slider
+SliderFill.Size = UDim2.new((DEFAULT_RADIUS-MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS), 0, 1, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+SliderFill.ZIndex = 2
+
+local SliderButton = Instance.new("TextButton")
+SliderButton.Name = "SliderButton"
+SliderButton.Parent = Slider
+SliderButton.Size = UDim2.new(0, 20, 0, 20)
+SliderButton.Position = UDim2.new(SliderFill.Size.X.Scale, 0, 0, -5)
+SliderButton.Text = ""
+SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SliderButton.ZIndex = 3
+
+-- Кнопка телепорта
+local TeleportBtn = Instance.new("TextButton")
+TeleportBtn.Name = "TeleportBtn"
+TeleportBtn.Parent = MainWindow
+TeleportBtn.Size = UDim2.new(0.9, 0, 0, 30)
+TeleportBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
+TeleportBtn.Text = "TELEPORT TO PLAYER"
+TeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 50, 120)
+
+-- Стилизация элементов
+local function applyStyles()
+    local elements = {ToggleBtn, Slider, SliderButton, TeleportBtn}
+    for _, element in pairs(elements) do
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0.3, 0)
+        corner.Parent = element
+    end
 end
+applyStyles()
 
-applyDeltaStyle()
-
--- Логика Kill-Aura
+-- Логика работы
 local currentRadius = DEFAULT_RADIUS
 local isActive = false
+local dragging = false
 
+-- Kill-Aura функция
 local function executeKill(target)
     if target and target:FindFirstChildOfClass("Humanoid") then
-        -- Основной метод
         target.Humanoid.Health = 0
-        
-        -- Резервные методы
-        pcall(function() target.Humanoid:TakeDamage(9999) end)
-        pcall(function() target.Humanoid:ChangeState(Enum.HumanoidStateType.Dead) end)
-        
-        -- Вибрация
         if VIBRATE_ON_KILL and UIS.TouchEnabled then
-            pcall(function() UIS:Vibrate(Enum.VibrationType.Light, 0.2) end)
+            pcall(function() UIS:Vibrate(Enum.VibrationType.Light, 0.1) end)
         end
     end
 end
@@ -93,21 +150,44 @@ local function killInRadius()
     end
 end
 
--- Изменение радиуса
-local radiusOptions = {100, 150, 200, 250}
-local currentOption = 2
+-- Телепорт к случайному игроку
+local function teleportToRandomPlayer()
+    local players = game.Players:GetPlayers()
+    local validTargets = {}
+    
+    for _, player in ipairs(players) do
+        if player ~= Player and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                table.insert(validTargets, hrp)
+            end
+        end
+    end
+    
+    if #validTargets > 0 then
+        local target = validTargets[math.random(1, #validTargets)]
+        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+            Player.Character.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 3, 0)
+            
+            -- Анимация телепорта
+            local effect = Instance.new("Part")
+            effect.Size = Vector3.new(1, 1, 1)
+            effect.CFrame = target.CFrame
+            effect.Anchored = true
+            effect.CanCollide = false
+            effect.Transparency = 1
+            local particle = Instance.new("ParticleEmitter", effect)
+            particle.Texture = "rbxassetid://242487987"
+            game.Debris:AddItem(effect, 1)
+        end
+    end
+end
 
-RadiusLabel.MouseButton1Click:Connect(function()
-    currentOption = currentOption % #radiusOptions + 1
-    currentRadius = radiusOptions[currentOption]
-    RadiusLabel.Text = "RADIUS: "..currentRadius
-end)
-
--- Управление аурой
-MainBtn.MouseButton1Click:Connect(function()
+-- Обработчики событий
+ToggleBtn.MouseButton1Click:Connect(function()
     isActive = not isActive
-    MainBtn.Text = "DELTA\n"..(isActive and "ON" or "OFF")
-    MainBtn.BackgroundColor3 = isActive and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    ToggleBtn.Text = "AURA: "..(isActive and "ON" or "OFF")
+    ToggleBtn.TextColor3 = isActive and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 120, 120)
     
     while isActive do
         killInRadius()
@@ -115,12 +195,41 @@ MainBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Авто-обновление при смерти
-Player.CharacterAdded:Connect(function()
-    if isActive then
-        MainBtn.Text = "DELTA\nON"
-        MainBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
+TeleportBtn.MouseButton1Click:Connect(function()
+    teleportToRandomPlayer()
+end)
+
+-- Логика ползунка
+local function updateSlider(value)
+    local percent = math.clamp((value - MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS), 0, 1)
+    currentRadius = math.floor(value)
+    RadiusLabel.Text = "RADIUS: "..currentRadius
+    SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+    SliderButton.Position = UDim2.new(percent, 0, 0, -5)
+end
+
+SliderButton.MouseButton1Down:Connect(function()
+    dragging = true
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
     end
 end)
 
-print("Delta Mobile Kill-Aura loaded! | Radius: "..currentRadius)
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local sliderPos = Slider.AbsolutePosition.X
+        local sliderSize = Slider.AbsoluteSize.X
+        local mousePos = input.Position.X
+        
+        local percent = math.clamp((mousePos - sliderPos)/sliderSize, 0, 1)
+        local newValue = MIN_RADIUS + math.floor(percent * (MAX_RADIUS-MIN_RADIUS))
+        updateSlider(newValue)
+    end
+end)
+
+-- Инициализация
+updateSlider(DEFAULT_RADIUS)
+print("Delta Mobile v2 loaded! | Radius:", currentRadius)
